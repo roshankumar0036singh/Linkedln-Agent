@@ -3,3 +3,4 @@ langchain-mistralai
 firecrawl-py
 python-dotenv
 requests
+fpdf2
