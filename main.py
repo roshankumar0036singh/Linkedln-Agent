@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from crewai import Crew, Process
 from agents import create_agents
 from tasks import create_tasks
-from linkedin_client import post_to_linkedin, post_carousel_to_linkedin
+from linkedin_client import post_to_linkedin, post_multiple_images_to_linkedin
 from content_calendar import log_post
 
 # Load environment variables
@@ -36,27 +36,28 @@ def extract_image_url(crew_result) -> str:
         return ""
 
 
-def extract_carousel_path(crew_result) -> str:
-    """Extract the carousel PDF file path from the Carousel Designer task output."""
+def extract_carousel_paths(crew_result) -> list:
+    """Extract the carousel image file paths from the Carousel Designer task output."""
     try:
         tasks_output = crew_result.tasks_output
         # Carousel task is index 4
         carousel_output = tasks_output[4].raw if len(tasks_output) > 4 else ""
 
         if "SKIP_CAROUSEL" in carousel_output:
-            return ""
+            return []
 
+        # Find line with file paths (comma separated)
         for line in carousel_output.split("\n"):
             line = line.strip()
-            if line.endswith(".pdf") or ".pdf" in line:
-                # Extract file path
-                for word in line.split():
-                    if ".pdf" in word:
-                        return word
-        return ""
+            if "slide_" in line and ".png" in line:
+                # Potential path line
+                paths = [p.strip() for p in line.split(",") if ".png" in p]
+                if paths:
+                    return paths
+        return []
     except Exception as e:
-        print(f"Could not extract carousel path: {e}")
-        return ""
+        print(f"Could not extract carousel paths: {e}")
+        return []
 
 
 def extract_topic_from_strategy(crew_result) -> str:
@@ -99,15 +100,15 @@ def run_agentic_workflow():
     final_post = result.raw
     print(final_post)
 
-    # Extract carousel PDF path (if any)
-    carousel_path = extract_carousel_path(result)
+    # Extract carousel paths (if any)
+    carousel_paths = extract_carousel_paths(result)
     # Extract image URL (if any)
     image_url = extract_image_url(result)
 
-    if carousel_path and os.path.exists(carousel_path):
-        print(f"\nCarousel PDF detected: {carousel_path}")
-        print("Posting as a LinkedIn Document post...")
-        post_response = post_carousel_to_linkedin(final_post, carousel_path)
+    if carousel_paths:
+        print(f"\nCarousel images detected: {len(carousel_paths)} slides")
+        print("Posting as a LinkedIn image carousel...")
+        post_response = post_multiple_images_to_linkedin(final_post, carousel_paths)
     elif image_url:
         print(f"\nGenerated Image URL: {image_url}")
         print("Posting with image...")

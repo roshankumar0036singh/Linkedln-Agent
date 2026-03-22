@@ -6,58 +6,16 @@ load_dotenv()
 token = os.getenv("LINKEDIN_ACCESS_TOKEN")
 urn = os.getenv("LINKEDIN_AUTHOR_URN")
 
-print(f"Testing Token (starts with): {token[:15]}...")
-print(f"Testing URN: {urn}")
-
 headers = {
     "Authorization": f"Bearer {token}",
     "Content-Type": "application/json",
     "X-Restli-Protocol-Version": "2.0.0"
 }
 
-# 1. Test basic profile access to verify token isn't expired
-print("\n--- Testing Basic Token Validity ---")
-try:
-    resp = requests.get("https://api.linkedin.com/v2/me", headers=headers)
-    print(f"Status: {resp.status_code}")
-    if resp.status_code == 200:
-        print("Token is valid! Connected as:", resp.json().get("localizedFirstName"))
-    else:
-        print("Error details:", resp.text)
-except Exception as e:
-    print(e)
-
-# 2. Test Organization Access
-print("\n--- Testing Organization Access ---")
-org_id = urn.split(":")[-1]
-try:
-    resp = requests.get(f"https://api.linkedin.com/v2/organizations/{org_id}", headers=headers)
-    print(f"Status: {resp.status_code}")
-    if resp.status_code == 200:
-        print("Successfully read Organization Profile!")
-    else:
-        print("Error details:", resp.text)
-except Exception as e:
-    print(e)
-
-# 3. Test Register Upload for Document
-print("\n--- Testing Document Register Upload ---")
+# 1. Register Image Upload
+print("\n--- Testing Multi-Image Post Registration ---")
 register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
-payload = {
-    "registerUploadRequest": {
-        "recipes": ["urn:li:digitalmediaRecipe:feedshare-document"],
-        "owner": urn,
-        "serviceRelationships": [
-            {
-                "relationshipType": "OWNER",
-                "identifier": "urn:li:userGeneratedContent"
-            }
-        ]
-    }
-}
-
-print("\n--- Testing Image Register Upload ---")
-payload_image = {
+payload_reg = {
     "registerUploadRequest": {
         "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
         "owner": urn,
@@ -69,9 +27,51 @@ payload_image = {
         ]
     }
 }
+
 try:
-    resp = requests.post(register_url, headers=headers, json=payload_image)
+    # We won't actually upload a binary here, just test if we can register 2 assets 
+    # and if the final ugcPosts payload with multiple READY assets is accepted.
+    # Note: In a real run, we'd need to upload the binary before READY status works, 
+    # but we can test the UGC Post structure.
+    
+    # Let's just try to create a post with a dummy READY asset (it might fail if not uploaded, but let's see the error)
+    print("Testing UGC Post payload structure with multiple media items...")
+    
+    ugc_url = "https://api.linkedin.com/v2/ugcPosts"
+    payload_ugc = {
+        "author": urn,
+        "lifecycleState": "PUBLISHED",
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {
+                    "text": "Testing Multi-Image Post from Python script"
+                },
+                "shareMediaCategory": "IMAGE",
+                "media": [
+                    {
+                        "status": "READY",
+                        "media": "urn:li:digitalmediaAsset:dummy1",
+                        "title": {"text": "Slide 1"}
+                    },
+                    {
+                        "status": "READY",
+                        "media": "urn:li:digitalmediaAsset:dummy2",
+                        "title": {"text": "Slide 2"}
+                    }
+                ]
+            }
+        },
+        "visibility": {
+            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+        }
+    }
+    
+    resp = requests.post(ugc_url, headers=headers, json=payload_ugc)
     print(f"Status: {resp.status_code}")
-    print("Response:", resp.text)
+    print("Response details:", resp.text)
+    # If it says "Asset not found" or "Asset is not READY", that's GOOD, 
+    # it means the *structure* was accepted and it reached the validation phase.
 except Exception as e:
     print(e)
+
+

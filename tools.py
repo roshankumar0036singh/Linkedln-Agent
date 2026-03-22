@@ -160,24 +160,25 @@ class ImageGeneratorTool(BaseTool):
             return f"Error generating image: {str(e)}"
 
 
-class CarouselGeneratorTool(BaseTool):
-    name: str = "Carousel PDF Generator Tool"
+class CarouselImageGeneratorTool(BaseTool):
+    name: str = "Carousel Image Generator Tool"
     description: str = (
-        "Generates a multi-slide carousel PDF for LinkedIn document posts. "
+        "Generates multiple separate slide images for a LinkedIn carousel post. "
         "Input must be a JSON string with this format: "
         '{"title": "Main Title", "subtitle": "Optional", '
         '"slides": [{"heading": "Slide Title", "body": "Slide content"}], '
         '"cta": "Follow for more!", "hashtags": "#Career #Internships"}. '
-        "Returns the file path to the generated PDF."
+        "Returns a comma-separated string of file paths to the generated images."
     )
 
     def _run(self, slides_json: str) -> str:
         try:
             from carousel_generator import generate_carousel_pdf
-            pdf_path = generate_carousel_pdf(slides_json)
-            if pdf_path.startswith("ERROR"):
-                return pdf_path
-            return f"CAROUSEL PDF GENERATED SUCCESSFULLY!\nFile path: {pdf_path}"
+            # Actually generates images now, returned as comma-separated paths
+            image_paths = generate_carousel_pdf(slides_json)
+            if image_paths.startswith("ERROR"):
+                return image_paths
+            return f"CAROUSEL IMAGES GENERATED SUCCESSFULLY!\nFile paths: {image_paths}"
         except Exception as e:
-            return f"Error generating carousel: {str(e)}"
+            return f"Error generating carousel images: {str(e)}"
 

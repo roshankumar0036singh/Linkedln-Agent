@@ -2,7 +2,7 @@ import os
 from crewai import Agent, LLM
 from tools import (
     FirecrawlSearchTool, LinkedInAnalyticsTool,
-    ImageGeneratorTool, CarouselGeneratorTool
+    ImageGeneratorTool, CarouselImageGeneratorTool
 )
 from content_calendar import get_topic_summary
 
@@ -22,7 +22,7 @@ def create_agents():
     search_tool = FirecrawlSearchTool()
     analytics_tool = LinkedInAnalyticsTool()
     image_tool = ImageGeneratorTool()
-    carousel_tool = CarouselGeneratorTool()
+    carousel_tool = CarouselImageGeneratorTool()
 
     # Fetch content calendar context for the Head Agent
     calendar_context = get_topic_summary()
@@ -81,11 +81,11 @@ def create_agents():
 
     carousel_designer = Agent(
         role="Carousel Content Designer",
-        goal="Design and generate a multi-slide carousel PDF for the LinkedIn post when requested.",
+        goal="Design and generate multiple slide images for a LinkedIn carousel post when requested.",
         backstory="""You are a content designer who specializes in creating LinkedIn carousel posts.
         When the Strategist decides a CAROUSEL format is best, you take the Writer's content and 
-        restructure it into a slide-by-slide JSON format, then use the Carousel PDF Generator Tool 
-        to create the actual PDF file. You output ONLY the file path of the generated PDF.""",
+        restructure it into a slide-by-slide JSON format, then use the Carousel Image Generator Tool 
+        to create the actual image files. You output ONLY the comma-separated file paths of the generated images.""",
         verbose=True,
         allow_delegation=False,
         tools=[carousel_tool],

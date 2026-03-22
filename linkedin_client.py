@@ -183,78 +183,60 @@ def post_carousel_to_linkedin(text_content: str, pdf_path: str) -> str:
     Posts a carousel (document) to LinkedIn by uploading a PDF.
     Uses the same register → upload → post flow as images.
     """
+def post_multiple_images_to_linkedin(text_content: str, image_paths: list) -> str:
+    """
+    Posts content to LinkedIn as a multi-image carousel.
+    Takes a list of local file paths, uploads them all, and attaches them to a UGC Post.
+    """
     access_token = os.getenv("LINKEDIN_ACCESS_TOKEN")
     author_urn = os.getenv("LINKEDIN_AUTHOR_URN")
 
     if not access_token or not author_urn or access_token == "your_linkedin_access_token":
         print("--- DRY RUN / MISSING KEYS ---")
-        print("Would have posted carousel to LinkedIn:")
-        print(f"Text: {text_content[:100]}...")
-        print(f"PDF: {pdf_path}")
+        print("Would have posted multi-image carousel to LinkedIn:")
+        print(text_content)
+        print(f"With {len(image_paths)} images: {image_paths}")
         print("------------------------------")
-        return "DRY RUN: Carousel post successfully simulated."
+        return "DRY RUN: Carousel successfully simulated."
 
-    if not os.path.exists(pdf_path):
-        return f"Error: PDF file not found at {pdf_path}"
-
-    headers_auth = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json",
-    }
-
-    # Step 1: Register document upload
-    register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
-    register_payload = {
-        "registerUploadRequest": {
-            "recipes": ["urn:li:digitalmediaRecipe:feedshare-document"],
-            "owner": author_urn,
-            "serviceRelationships": [
-                {
-                    "relationshipType": "OWNER",
-                    "identifier": "urn:li:userGeneratedContent"
-                }
-            ]
-        }
-    }
-
-    try:
-        reg_response = requests.post(register_url, headers=headers_auth, json=register_payload)
-        reg_response.raise_for_status()
-        reg_data = reg_response.json()
-
-        upload_url = reg_data["value"]["uploadMechanism"][
-            "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-        ]["uploadUrl"]
-        asset_urn = reg_data["value"]["asset"]
-        print(f"Document asset registered: {asset_urn}")
-
-    except Exception as e:
-        return f"Failed to register document upload: {str(e)}"
-
-    # Step 2: Upload PDF binary
-    try:
-        upload_headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/octet-stream",
-        }
-        with open(pdf_path, "rb") as f:
-            upload_response = requests.put(upload_url, headers=upload_headers, data=f)
-
-        if upload_response.status_code not in [200, 201]:
-            return f"Failed to upload PDF: {upload_response.status_code} - {upload_response.text}"
-        print("PDF uploaded successfully.")
-
-    except Exception as e:
-        return f"Failed to upload PDF: {str(e)}"
-
-    # Step 3: Create the post with the document
-    post_url = "https://api.linkedin.com/v2/ugcPosts"
-    post_headers = {
+    url = "https://api.linkedin.com/v2/ugcPosts"
+    headers = {
         "Authorization": f"Bearer {access_token}",
         "X-Restli-Protocol-Version": "2.0.0",
         "Content-Type": "application/json"
     }
-    post_payload = {
+
+    media_assets = []
+    
+    # Upload each image
+    for i, img_path in enumerate(image_paths):
+        print(f"Uploading image {i+1}/{len(image_paths)}...")
+        try:
+            upload_info = register_image_upload(access_token, author_urn)
+            success = upload_image_to_linkedin(
+                upload_info["upload_url"], img_path, access_token
+            )
+            if success:
+                media_assets.append({
+                    "status": "READY",
+                    "media": upload_info["asset"],
+                    "title": {"text": f"Slide {i+1}"}
+                })
+        except Exception as e:
+            print(f"Failed to upload slide {i+1}: {e}")
+            continue
+            
+        finally:
+            # Clean up temp images
+            try:
+                os.remove(img_path)
+            except Exception:
+                pass
+
+    if not media_assets:
+        return "Failed to upload any images for the carousel."
+
+    payload = {
         "author": author_urn,
         "lifecycleState": "PUBLISHED",
         "specificContent": {
@@ -262,16 +244,8 @@ def post_carousel_to_linkedin(text_content: str, pdf_path: str) -> str:
                 "shareCommentary": {
                     "text": text_content
                 },
-                "shareMediaCategory": "NATIVE_DOCUMENT",
-                "media": [
-                    {
-                        "status": "READY",
-                        "media": asset_urn,
-                        "title": {
-                            "text": "Career Launchpad Guide"
-                        }
-                    }
-                ]
+                "shareMediaCategory": "IMAGE",
+                "media": media_assets
             }
         },
         "visibility": {
@@ -280,19 +254,17 @@ def post_carousel_to_linkedin(text_content: str, pdf_path: str) -> str:
     }
 
     try:
-        response = requests.post(post_url, headers=post_headers, json=post_payload)
+        response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
-        return f"Successfully posted carousel to LinkedIn! ID: {response.json().get('id')}"
-    except requests.exceptions.RequestException as e:
-        error_msg = str(e)
-        if "401" in error_msg:
-            error_msg += "\n\n*** ACCESS TOKEN EXPIRED. Regenerate at developer.linkedin.com ***"
-        return f"Failed to post carousel. Error: {error_msg}"
-
-    finally:
-        # Clean up temp PDF
-        try:
-            os.remove(pdf_path)
-        except Exception:
-            pass
+        return f"Successfully posted image carousel to LinkedIn! ID: {response.json().get('id')}"
+    except requests.exceptions.HTTPError as e:
+        status_code = e.response.status_code
+        error_msg = e.response.text
+        if status_code == 401:
+            return f"Error: 401 Unauthorized. Access token expired or missing w_organization_social scope."
+        elif status_code == 400:
+            return f"Error: 400 Bad Request. Validation failed. {error_msg}"
+        return f"Failed to post carousel: {status_code} - {error_msg}"
+    except Exception as e:
+        return f"An error occurred while posting carousel: {str(e)}"
 
