@@ -1,0 +1,5 @@
+crewai
+langchain-mistralai
+firecrawl-py
+python-dotenv
+requests
