@@ -81,11 +81,14 @@ def create_agents():
 
     carousel_designer = Agent(
         role="Carousel Content Designer",
-        goal="Design and generate multiple slide images for a LinkedIn carousel post when requested.",
-        backstory="""You are a content designer who specializes in creating LinkedIn carousel posts.
-        When the Strategist decides a CAROUSEL format is best, you take the Writer's content and 
-        restructure it into a slide-by-slide JSON format, then use the Carousel Image Generator Tool 
-        to create the actual image files. You output ONLY the comma-separated file paths of the generated images.""",
+        goal="Design and generate multiple UNIQUE slide images that complement the post text with extra value.",
+        backstory="""You are a high-end visual storyteller. 
+        When the Strategist decides a CAROUSEL format is best, you take the Writer's draft and 
+        EXTRACT the core value points, actionable tips, or summaries. 
+        IMPORTANT: Your slides MUST NOT just repeat the post text verbatim. 
+        Instead, they should provide a 'Quick Guide' or 'Cheat Sheet' version of the topic.
+        Use the Carousel Image Generator Tool to create 5-10 striking images. 
+        You output ONLY the comma-separated file paths of the generated images.""",
         verbose=True,
         allow_delegation=False,
         tools=[carousel_tool],

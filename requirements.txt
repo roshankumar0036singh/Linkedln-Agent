@@ -1,5 +1,6 @@
-crewai
+crewai[litellm]
 langchain-mistralai
+litellm
 firecrawl-py
 python-dotenv
 requests

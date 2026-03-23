@@ -8,7 +8,7 @@ def create_tasks(agents):
         Interview Preparation, Career Growth Mindset, Hackathons & Competitions, Freelancing & Side Projects,
         LinkedIn Profile Optimization.
         
-        Also decide: Should this be a REGULAR post (text + image) or a CAROUSEL post (multi-slide PDF)?
+        Also decide: Should this be a REGULAR post (text + image) or a CAROUSEL post (multi-slide images)?
         Use CAROUSEL for listicle content like "Top 5..." or "3 Tips for...".
         Use REGULAR for news, announcements, or single-topic deep dives.
         
@@ -54,19 +54,21 @@ def create_tasks(agents):
         description="""Check the Strategist's output to see if this should be a CAROUSEL post.
         
         IF the format is CAROUSEL:
-        Take the Writer's content and restructure it into a JSON format for the carousel generator.
+        Take the Writer's content and EXTRACT the most important 4-6 points to create a unique 'Quick Guide' or 'Cheat Sheet'. 
+        The slides MUST provide extra value and NOT just repeat the post text verbatim.
+        Structure it into a JSON format for the carousel generator.
         The JSON must follow this exact format:
         {"title": "Main Title", "subtitle": "Optional subtitle", 
-         "slides": [{"heading": "Point 1 Title", "body": "Point 1 details..."}, 
-                     {"heading": "Point 2 Title", "body": "Point 2 details..."}],
-         "cta": "Follow Career Launchpad for more!", "hashtags": "#relevant #hashtags"}
-        Then use the Carousel PDF Generator Tool with this JSON string.
-        Output ONLY the file path of the generated PDF.
+         "slides": [{"heading": "Slide 1 Title", "body": "Slide 1 details..."}, 
+                     {"heading": "Slide 2 Title", "body": "Slide 2 details..."}],
+         "cta": "Like & Follow for more!", "hashtags": "#relevant #hashtags"}
+        Then use the Carousel Image Generator Tool with this JSON string.
+        Output ONLY the comma-separated file paths of the generated images.
         
         IF the format is REGULAR:
         Output exactly: "SKIP_CAROUSEL - Regular post format selected."
         """,
-        expected_output="Either a PDF file path or 'SKIP_CAROUSEL - Regular post format selected.'",
+        expected_output="Either a comma-separated string of file paths or 'SKIP_CAROUSEL - Regular post format selected.'",
         agent=agents["carousel_designer"],
         context=[strategize_task, writing_task]
     )
@@ -77,9 +79,9 @@ def create_tasks(agents):
         IF REGULAR: Read the post text and craft a detailed image prompt, then use the Image Generator Tool.
         Return ONLY the final image URL.
         
-        IF CAROUSEL: The carousel PDF already has visuals. Output exactly: "SKIP_IMAGE - Carousel post uses PDF visuals."
+        IF CAROUSEL: The carousel images already provide visuals. Output exactly: "SKIP_IMAGE - Carousel post uses its own slide visuals."
         """,
-        expected_output="Either an image URL or 'SKIP_IMAGE - Carousel post uses PDF visuals.'",
+        expected_output="Either an image URL or 'SKIP_IMAGE - Carousel post uses its own slide visuals.'",
         agent=agents["creative_director"],
         context=[strategize_task, writing_task]
     )
