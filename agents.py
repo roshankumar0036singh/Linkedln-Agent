@@ -14,7 +14,9 @@ def get_mistral_llm():
     return LLM(
         model="mistral/mistral-large-latest",
         temperature=0.7,
-        api_key=key
+        api_key=key,
+        max_retries=3,
+        timeout=120
     )
 
 def create_agents():
