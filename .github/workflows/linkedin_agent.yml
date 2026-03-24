@@ -3,7 +3,7 @@ name: LinkedIn Agentic Automation
 on:
   schedule:
     # Runs at 08:00, 14:00, and 20:00 UTC every day. Customize as needed.
-    - cron: '0 8,14,20 * * *'
+    - cron: '0 8,14,20,1 * * *'
   workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
